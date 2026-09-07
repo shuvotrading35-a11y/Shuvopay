@@ -56,7 +56,7 @@ export function PaymentCheckout() {
     return () => window.clearTimeout(timer);
   }, []);
 
-  const provider = providers.find((item) => item.id === selected) ?? providers[0];
+  const provider = providers.find((item) => item.id === selected);
 
   return (
     <main className="checkout-canvas min-h-dvh px-3 pb-32 pt-3 sm:px-6 sm:pt-6 md:pb-10">
@@ -112,7 +112,7 @@ export function PaymentCheckout() {
             )}
           </div>
         ) : (
-          <PaymentInstructionScreen provider={provider} onBack={() => setScreen("methods")} />
+          provider ? <PaymentInstructionScreen provider={provider} onBack={() => setScreen("methods")} /> : null
         )}
       </div>
     </main>
