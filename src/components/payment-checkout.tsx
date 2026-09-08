@@ -59,7 +59,7 @@ export function PaymentCheckout() {
   const provider = providers.find((item) => item.id === selected);
 
   return (
-    <main className="checkout-canvas min-h-dvh px-3 pb-32 pt-3 sm:px-6 sm:pt-6 md:pb-10">
+    <main className="checkout-canvas min-h-dvh px-3 pb-40 pt-3 sm:px-6 sm:pt-6 md:pb-10">
       <div className="mx-auto w-full max-w-[780px]">
         {screen === "methods" ? (
           <div className="animate-page-in">
@@ -190,7 +190,7 @@ export function PaymentMethodCard({ provider, selected, onSelect }: { provider: 
   return (
     <Button
       variant="paymentCard"
-      className={cn("relative h-32 w-full flex-col overflow-hidden", selected && "payment-card-selected")}
+      className={cn("relative h-24 w-full flex-col overflow-hidden", selected && "payment-card-selected")}
       onClick={onSelect}
       aria-pressed={selected}
     >
