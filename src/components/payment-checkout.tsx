@@ -204,8 +204,8 @@ export function PaymentMethodCard({ provider, selected, onSelect }: { provider: 
 function ProviderLogo({ provider, compact = false }: { provider: Provider; compact?: boolean }) {
   return (
     <div className={cn("flex items-center gap-2.5", compact && "mt-4")}>
-      <span className={cn("provider-mark", provider.accent, compact ? "size-10 text-xl" : "size-16 text-3xl")}>{provider.mark}</span>
-      <span className={cn("font-black text-foreground", compact ? "text-lg" : "text-2xl")}>{provider.name}</span>
+      <span className={cn("provider-mark", provider.accent, compact ? "size-8 text-base" : "size-16 text-3xl")}>{provider.mark}</span>
+      <span className={cn("font-black text-foreground", compact ? "text-base" : "text-2xl")}>{provider.name}</span>
     </div>
   );
 }
@@ -319,5 +319,5 @@ export function ErrorState() {
 }
 
 export function LoadingState() {
-  return <div className="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-label="Loading payment methods">{[0,1,2,3].map((item) => <div key={item} className="h-32 rounded-2xl border border-border bg-card p-4"><Skeleton className="ml-auto h-4 w-14" /><div className="mt-7 flex items-center justify-center gap-2"><Skeleton className="size-10 rounded-xl" /><Skeleton className="h-5 w-16" /></div></div>)}</div>;
+  return <div className="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-label="Loading payment methods">{[0,1,2,3].map((item) => <div key={item} className="h-24 rounded-2xl border border-border bg-card p-4"><Skeleton className="ml-auto h-4 w-14" /><div className="mt-7 flex items-center justify-center gap-2"><Skeleton className="size-10 rounded-xl" /><Skeleton className="h-5 w-16" /></div></div>)}</div>;
 }
