@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useParams } from "@tanstack/react-router";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "https://shuvopaycom-production.up.railway.app/api/v1";
 
@@ -47,11 +48,6 @@ const internationalOptions = [
   { name: "Binance", initials: "B", address: "TRC20: TXxxxxxxxxxxxxxxxxxxxxxx", network: "Binance Pay / USDT TRC20" },
 ];
 
-function getInvoiceId(): string {
-  const parts = window.location.pathname.split("/");
-  return parts[parts.length - 1] ?? "";
-}
-
 export function PaymentCheckout() {
   const [tab, setTab] = useState<Tab>("mobile");
   const [selected, setSelected] = useState<ProviderId | null>(null);
@@ -60,7 +56,7 @@ export function PaymentCheckout() {
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
   const [invoiceError, setInvoiceError] = useState("");
 
-  const invoiceId = getInvoiceId();
+  const { invoiceId } = useParams({ strict: false });
 
   useEffect(() => {
     if (!invoiceId) { setLoading(false); return; }
