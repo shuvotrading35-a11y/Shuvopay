@@ -1,4 +1,4 @@
-# Nova Pay UI
+# Shuvo Pay UI
 
 Create a modern, premium and responsive Payment Gateway Checkout UI based on the attached reference screenshots.
 
