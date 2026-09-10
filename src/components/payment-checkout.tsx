@@ -1,386 +1,327 @@
-import { useEffect, useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
-  ArrowLeft,
+  Activity as ActivityIcon,
+  ArrowRight,
   BadgeCheck,
+  Banknote,
+  BellRing,
+  Bot,
+  Braces,
   Check,
-  CircleAlert,
-  Clipboard,
-  LoaderCircle,
+  ChevronRight,
+  CircleDollarSign,
+  Clock3,
+  Code2,
+  CreditCard,
+  FileCheck2,
+  FilePlus2,
+  Fingerprint,
+  FolderKanban,
+  Gauge,
+  KeyRound,
+  Landmark,
   LockKeyhole,
+  Menu,
+  PanelsTopLeft,
+  RadioTower,
+  ReceiptText,
+  RefreshCcw,
   ShieldCheck,
+  Smartphone,
+  Sparkles,
+  WalletCards,
   X,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { useParams } from "@tanstack/react-router";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "https://shuvopaycom-production.up.railway.app/api/v1";
+const navItems = ["Home", "Payments", "Transactions", "Invoices", "API", "Settings"];
 
-type Tab = "mobile" | "international";
-type ProviderId = "bkash" | "nagad";
-type Status = "idle" | "loading" | "success" | "error";
-
-type Provider = {
-  id: ProviderId;
-  name: string;
-  logo: string;
-  accent: string;
-};
-
-type InvoiceData = {
-  id: string;
-  invoice_number: string;
-  amount: number;
-  currency: string;
-  provider: string;
-  receiver_account: string | null;
-  status: string;
-  expires_at: string;
-};
-
-const allProviders: Provider[] = [
-  { id: "bkash", name: "bKash", logo: "/bkash.svg", accent: "provider-bkash" },
-  { id: "nagad", name: "Nagad", logo: "/nagad.svg", accent: "provider-nagad" },
+const overviewStats = [
+  { label: "Total Balance", value: "৳ 24,850.00", detail: "Available across projects", icon: WalletCards, tone: "primary" },
+  { label: "Today's Received", value: "৳ 5,420.00", detail: "+12.8% from yesterday", icon: CircleDollarSign, tone: "success" },
+  { label: "Verified Transactions", value: "128", detail: "All checks completed", icon: BadgeCheck, tone: "cyan" },
+  { label: "Pending Payments", value: "07", detail: "Waiting for verification", icon: Clock3, tone: "warning" },
 ];
 
-const internationalOptions = [
-  { name: "Binance", initials: "B", address: "TRC20: TXxxxxxxxxxxxxxxxxxxxxxx", network: "Binance Pay / USDT TRC20" },
+const workflow = [
+  { label: "Payment Request", icon: CreditCard },
+  { label: "Invoice Generated", icon: FilePlus2 },
+  { label: "Customer Payment", icon: Smartphone },
+  { label: "Transaction Detected", icon: RadioTower },
+  { label: "Automatic Verification", icon: ShieldCheck },
+  { label: "Balance Updated", icon: RefreshCcw },
 ];
+
+const transactions = [
+  { title: "Payment Received", amount: "৳500.00", provider: "bKash", status: "Verified", time: "10:38 PM", pending: false },
+  { title: "Payment Received", amount: "৳1,200.00", provider: "Nagad", status: "Verified", time: "09:52 PM", pending: false },
+  { title: "Payment Pending", amount: "৳850.00", provider: "Rocket", status: "Pending", time: "09:16 PM", pending: true },
+];
+
+const securityItems = [
+  { label: "Secure Authentication", icon: LockKeyhole },
+  { label: "Transaction Verification", icon: BadgeCheck },
+  { label: "Protected API", icon: KeyRound },
+  { label: "Real-Time Processing", icon: Zap },
+  { label: "Private Access", icon: ShieldCheck },
+];
+
+const projects = [
+  { title: "SMM Platform", description: "Payment & balance automation", icon: PanelsTopLeft },
+  { title: "Telegram Bots", description: "Automated payment collection", icon: Bot },
+  { title: "Digital Services", description: "Invoice and transaction management", icon: FolderKanban },
+  { title: "Personal Projects", description: "Private payment workflows", icon: Braces },
+];
+
+const activities = [
+  { title: "Payment received", time: "2 minutes ago", icon: Banknote },
+  { title: "Invoice verified", time: "8 minutes ago", icon: FileCheck2 },
+  { title: "Balance updated", time: "15 minutes ago", icon: RefreshCcw },
+  { title: "API request completed", time: "24 minutes ago", icon: Code2 },
+];
+
+const codeRequest = `POST /api/v1/payment/create
+
+{
+  "amount": 500,
+  "currency": "BDT",
+  "reference": "ORDER_12345"
+}`;
+
+const codeResponse = `{
+  "status": "success",
+  "transaction_id": "TXN_839201",
+  "payment_url": "/pay/..."
+}`;
+
+function sectionId(label: string) {
+  return label.toLowerCase();
+}
 
 export function PaymentCheckout() {
-  const [tab, setTab] = useState<Tab>("mobile");
-  const [selected, setSelected] = useState<ProviderId | null>(null);
-  const [screen, setScreen] = useState<"methods" | "instruction">("methods");
-  const [loading, setLoading] = useState(true);
-  const [invoice, setInvoice] = useState<InvoiceData | null>(null);
-  const [invoiceError, setInvoiceError] = useState("");
-
-  const { invoiceId } = useParams({ strict: false });
-
-  useEffect(() => {
-    if (!invoiceId) { setLoading(false); return; }
-    fetch(`${API_URL}/invoice/public/${invoiceId}`)
-      .then(async (r) => {
-        if (!r.ok) throw new Error("Invoice not found");
-        return r.json();
-      })
-      .then((data) => {
-        setInvoice(data);
-        if (data.provider) {
-          const p = allProviders.find((x) => x.id === data.provider.toLowerCase());
-          if (p) setSelected(p.id);
-        }
-      })
-      .catch((e) => setInvoiceError(e.message))
-      .finally(() => setLoading(false));
-  }, [invoiceId]);
-
-  const providers = invoice?.provider
-    ? allProviders.filter((p) => p.id === invoice.provider.toLowerCase())
-    : allProviders;
-
-  const provider = allProviders.find((item) => item.id === selected);
-
-  if (loading) {
-    return (
-      <main className="checkout-canvas min-h-dvh flex items-center justify-center">
-        <LoaderCircle className="size-10 animate-spin text-primary" />
-      </main>
-    );
-  }
-
-  if (invoiceError || !invoice) {
-    return (
-      <main className="checkout-canvas min-h-dvh flex items-center justify-center px-4">
-        <div className="glass-panel px-6 py-10 text-center max-w-sm w-full">
-          <CircleAlert className="size-12 mx-auto text-error mb-3" />
-          <h2 className="text-xl font-bold text-foreground">Invoice পাওয়া যায়নি</h2>
-          <p className="text-sm text-muted-foreground mt-2">{invoiceError || "Invalid invoice link."}</p>
-        </div>
-      </main>
-    );
-  }
-
-  if (invoice.status === "paid") {
-    return (
-      <main className="checkout-canvas min-h-dvh flex items-center justify-center px-4">
-        <SuccessState invoiceNumber={invoice.invoice_number} onDone={() => window.close()} />
-      </main>
-    );
-  }
-
   return (
-    <main className="checkout-canvas min-h-dvh px-3 pb-32 pt-3 sm:px-6 sm:pt-6 md:pb-10">
-      <div className="mx-auto w-full max-w-[780px]">
-        {screen === "methods" ? (
-          <div className="animate-page-in">
-            <PaymentHeader />
-            <MerchantCard invoice={invoice} />
-            <PaymentTabs value={tab} onChange={setTab} />
-
-            <section className="mt-6">
-              <div className="mb-3 flex items-end justify-between px-1">
-                <div>
-                  <p className="text-xs font-bold uppercase text-primary">Choose a method</p>
-                  <h2 className="mt-1 text-lg font-bold text-foreground">
-                    {tab === "mobile" ? "Mobile banking" : "International Transfer"}
-                  </h2>
-                </div>
-                <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                  <LockKeyhole className="size-3.5" /> Secure
-                </span>
-              </div>
-
-              {tab === "mobile" ? (
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {providers.map((item) => (
-                    <PaymentMethodCard
-                      key={item.id}
-                      provider={item}
-                      selected={selected === item.id}
-                      onSelect={() => setSelected(item.id)}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {internationalOptions.map((opt) => <InternationalCard key={opt.name} {...opt} />)}
-                </div>
-              )}
-            </section>
-
-            <div className="mt-5 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-              <ShieldCheck className="size-4 text-success" /> Your payment details stay protected
-            </div>
-
-            {tab === "mobile" && (
-              <BottomPayBar
-                enabled={selected !== null}
-                amount={invoice.amount}
-                onPay={() => selected && setScreen("instruction")}
-              />
-            )}
-          </div>
-        ) : (
-          provider ? (
-            <PaymentInstructionScreen
-              provider={provider}
-              invoice={invoice}
-              onBack={() => setScreen("methods")}
-            />
-          ) : null
-        )}
-      </div>
+    <main className="min-h-dvh overflow-x-hidden bg-background text-foreground">
+      <Navbar />
+      <Hero />
+      <PaymentOverview />
+      <AutomationWorkflow />
+      <Transactions />
+      <Invoices />
+      <ApiSection />
+      <Security />
+      <MyProjects />
+      <Activity />
+      <FinalCta />
+      <Footer />
     </main>
   );
 }
 
-function PaymentHeader({ instruction = false, onBack }: { instruction?: boolean; onBack?: () => void }) {
+export function Navbar() {
+  const [open, setOpen] = useState(false);
   return (
-    <header className="glass-panel grid h-16 grid-cols-[minmax(0,1fr)_auto] items-center px-3 sm:px-4">
-      <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-        <LockKeyhole className="size-3.5 text-success" /> Secure checkout
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-border/70 bg-background/85 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <a href="#home" className="flex items-center gap-2.5" aria-label="ShuvoPay home">
+          <BrandMark />
+          <span className="text-lg font-extrabold text-foreground">ShuvoPay</span>
+        </a>
+        <nav className="hidden items-center gap-1 lg:flex" aria-label="Main navigation">
+          {navItems.map((item) => (
+            <a key={item} href={`#${sectionId(item)}`} className="rounded-md px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
+              {item}
+            </a>
+          ))}
+        </nav>
+        <div className="flex items-center gap-2">
+          <Button asChild className="hidden h-10 sm:inline-flex">
+            <a href="#overview">Dashboard <ArrowRight /></a>
+          </Button>
+          <Button variant="ghost" size="icon" className="lg:hidden" aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+            {open ? <X /> : <Menu />}
+          </Button>
+        </div>
       </div>
-      <Button variant="ghost" size="icon" onClick={onBack} className="icon-control">
-        {instruction ? <ArrowLeft /> : <X />}
-      </Button>
+      <div className={cn("border-t border-border bg-card px-4 transition-all duration-300 lg:hidden", open ? "max-h-96 py-3 opacity-100" : "max-h-0 overflow-hidden py-0 opacity-0")}>
+        <nav className="mx-auto grid max-w-7xl gap-1" aria-label="Mobile navigation">
+          {navItems.map((item) => (
+            <a key={item} href={`#${sectionId(item)}`} onClick={() => setOpen(false)} className="rounded-md px-3 py-2.5 text-sm font-semibold text-muted-foreground hover:bg-secondary hover:text-foreground">
+              {item}
+            </a>
+          ))}
+          <Button asChild className="mt-2 w-full"><a href="#overview" onClick={() => setOpen(false)}>Dashboard <ArrowRight /></a></Button>
+        </nav>
+      </div>
     </header>
   );
 }
 
-function MerchantCard({ invoice }: { invoice: InvoiceData }) {
+function BrandMark({ dark = false }: { dark?: boolean }) {
   return (
-    <section className="py-6 text-center sm:py-8">
-      <img src="/shuvopay-logo.png" alt="ShuvoPay" className="mx-auto h-16 w-auto object-contain" />
-      <div className="mx-auto mt-4 w-fit rounded-full border border-border bg-card px-4 py-2 text-xs font-semibold text-muted-foreground shadow-soft">
-        Invoice ID: <span className="text-foreground">{invoice.invoice_number}</span>
-      </div>
-    </section>
+    <span className={cn("grid size-9 place-items-center rounded-md shadow-brand", dark ? "bg-api-accent text-api" : "brand-gradient text-primary-foreground")}>
+      <Fingerprint className="size-5" />
+    </span>
   );
 }
 
-function PaymentTabs({ value, onChange }: { value: Tab; onChange: (tab: Tab) => void }) {
+export function Hero() {
   return (
-    <div className="grid grid-cols-2 rounded-2xl bg-secondary p-1.5" role="tablist">
-      <Button role="tab" aria-selected={value === "mobile"} variant={value === "mobile" ? "tabActive" : "tab"} onClick={() => onChange("mobile")}>Mobile Banking</Button>
-      <Button role="tab" aria-selected={value === "international"} variant={value === "international" ? "tabActive" : "tab"} onClick={() => onChange("international")}>International</Button>
-    </div>
-  );
-}
-
-function PaymentMethodCard({ provider, selected, onSelect }: { provider: Provider; selected: boolean; onSelect: () => void }) {
-  return (
-    <Button
-      variant="paymentCard"
-      className={cn("relative h-32 w-full flex-col overflow-hidden", selected && "payment-card-selected")}
-      onClick={onSelect}
-      aria-pressed={selected}
-    >
-      <span className="absolute right-2.5 top-2.5 rounded-full bg-secondary px-2 py-1 text-[9px] font-extrabold uppercase text-muted-foreground">Personal</span>
-      {selected && (
-        <span className="absolute left-3 top-3 grid size-5 place-items-center rounded-full bg-primary text-primary-foreground">
-          <Check className="size-3" />
-        </span>
-      )}
-      <img src={provider.logo} alt={provider.name} className="mt-4 h-10 w-auto object-contain" />
-    </Button>
-  );
-}
-
-function InternationalCard({ name, initials, address, network }: (typeof internationalOptions)[number]) {
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    await navigator.clipboard?.writeText(address);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1400);
-  };
-  return (
-    <article className="rounded-2xl border border-border bg-card p-4 shadow-soft">
-      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 border-b border-border pb-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-yellow-400 text-xs font-black text-yellow-900">{initials}</span>
-        <div><h3 className="truncate font-bold text-foreground">{name}</h3><p className="text-xs text-muted-foreground">{network}</p></div>
-      </div>
-      <dl className="mt-3 grid gap-2 text-sm">
-        <div>
-          <dt className="text-xs text-muted-foreground">Address</dt>
-          <dd className="mt-0.5 flex items-center justify-between gap-2 font-bold text-foreground break-all">
-            <span className="text-xs">{address}</span>
-            <Button variant="copy" size="icon" onClick={copy} className="shrink-0">
-              {copied ? <Check /> : <Clipboard />}
-            </Button>
-          </dd>
+    <section id="home" className="hero-grid relative scroll-mt-20 pt-28 sm:pt-32">
+      <div className="mx-auto grid max-w-7xl items-center gap-14 px-4 pb-20 sm:px-6 lg:grid-cols-[0.88fr_1.12fr] lg:gap-16 lg:px-8 lg:pb-28">
+        <div className="max-w-2xl animate-rise">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary-soft px-3 py-1.5 text-xs font-extrabold text-primary">
+            <ShieldCheck className="size-4" /> PRIVATE PAYMENT SYSTEM
+          </div>
+          <h1 className="text-5xl font-extrabold leading-[1.02] text-foreground sm:text-6xl lg:text-7xl">
+            Your Payments.<br /><span className="brand-text">Your Control.</span>
+          </h1>
+          <p className="mt-7 max-w-xl text-base leading-7 text-muted-foreground sm:text-lg sm:leading-8">
+            A private payment automation system for managing invoices, transactions, verification and payment workflows across my own projects.
+          </p>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <Button asChild size="lg" className="h-12 w-full px-6 sm:w-auto"><a href="#overview">Open Dashboard <ArrowRight /></a></Button>
+            <Button asChild variant="outline" size="lg" className="h-12 w-full px-6 sm:w-auto"><a href="#transactions">View Transactions</a></Button>
+          </div>
+          <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm font-semibold text-muted-foreground">
+            <span className="flex items-center gap-2"><span className="status-dot" /> System operational</span>
+            <span className="flex items-center gap-2"><LockKeyhole className="size-4 text-primary" /> Owner access only</span>
+          </div>
         </div>
-      </dl>
-    </article>
-  );
-}
-
-function BottomPayBar({ enabled, amount, onPay }: { enabled: boolean; amount: number; onPay: () => void }) {
-  return (
-    <div className="bottom-pay-shell fixed inset-x-0 bottom-0 z-20 border-t border-border p-3 sm:p-4 md:sticky md:mt-7 md:rounded-2xl md:border">
-      <Button variant="pay" className="mx-auto h-14 w-full max-w-[748px]" disabled={!enabled} onClick={onPay}>
-        <span>{enabled ? `Pay ৳${amount.toFixed(2)}` : "Select a payment method"}</span>
-        {enabled && <ArrowLeft className="rotate-180" />}
-      </Button>
-    </div>
-  );
-}
-
-function PaymentInstructionScreen({ provider, invoice, onBack }: { provider: Provider; invoice: InvoiceData; onBack: () => void }) {
-  const [status, setStatus] = useState<Status>("idle");
-  const [transactionId, setTransactionId] = useState("");
-  const [errorMsg, setErrorMsg] = useState("");
-
-  const verify = async () => {
-    if (transactionId.trim().length < 6) { setStatus("error"); setErrorMsg("Transaction ID কমপক্ষে ৬ অক্ষরের হতে হবে।"); return; }
-    setStatus("loading"); setErrorMsg("");
-    try {
-      const resp = await fetch(`${API_URL}/payment/verify-trx`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invoice_id: invoice.id, transaction_id: transactionId.trim() }),
-      });
-      const data = await resp.json();
-      if (data.status === "paid") { setStatus("success"); }
-      else { setStatus("error"); setErrorMsg(data.message ?? "Transaction ID verify করা যায়নি।"); }
-    } catch {
-      setStatus("error"); setErrorMsg("সার্ভার error। আবার চেষ্টা করুন।");
-    }
-  };
-
-  return (
-    <div className="animate-slide-in">
-      <PaymentHeader instruction onBack={onBack} />
-      <MerchantCard invoice={invoice} />
-      {status === "success" ? (
-        <SuccessState invoiceNumber={invoice.invoice_number} onDone={onBack} />
-      ) : (
-        <>
-          <section className="mb-5 flex justify-center">
-            <img src={provider.logo} alt={provider.name} className="h-12 w-auto object-contain" />
-          </section>
-
-          <section className={cn("instruction-card overflow-hidden rounded-3xl border border-border shadow-elevated", provider.accent)}>
-            <div className="instruction-head px-5 py-5 text-center sm:px-7">
-              <p className="text-xs font-bold uppercase opacity-75">শেষ ধাপ</p>
-              <h2 className="mt-1 text-xl font-extrabold">পেমেন্ট তথ্য দিন</h2>
-            </div>
-            <div className="bg-card p-4 sm:p-6">
-              <div className="grid gap-3 sm:grid-cols-2">
-                {invoice.receiver_account && <AccountNumberRow number={invoice.receiver_account} />}
-                <AmountSummary amount={`৳${invoice.amount.toFixed(2)}`} />
-              </div>
-              <ol className="mt-5 grid gap-3 text-sm text-foreground">
-                {[
-                  <span>আপনার <strong>{provider.name} App</strong> খুলুন</span>,
-                  <span><strong>Send Money</strong> নির্বাচন করুন</span>,
-                  <span>উপরে দেওয়া প্রাপক নম্বরটি ব্যবহার করুন</span>,
-                  <span><strong>৳{invoice.amount.toFixed(2)}</strong> পেমেন্ট করুন</span>,
-                  <span>পেমেন্ট শেষে <strong>Transaction ID</strong> দিন</span>,
-                ].map((text, i) => (
-                  <li key={i} className="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-2.5">
-                    <span className="grid size-6 place-items-center rounded-full bg-secondary text-[11px] font-black text-primary">{i + 1}</span>
-                    <span className="pt-0.5 leading-5">{text}</span>
-                  </li>
-                ))}
-              </ol>
-              <div className="mt-5">
-                <label htmlFor="transaction" className="mb-2 block text-sm font-bold text-foreground">ট্রানজেকশন আইডি দিন</label>
-                <Input id="transaction" value={transactionId} onChange={(e) => { setTransactionId(e.target.value); if (status === "error") setStatus("idle"); }} placeholder="যেমন: 8N7A2C91XZ" autoComplete="off" className="h-14 rounded-xl bg-background px-4 font-semibold uppercase" />
-              </div>
-            </div>
-          </section>
-
-          {status === "error" && (
-            <div role="alert" className="mt-3 flex items-center gap-2 rounded-xl border border-error/20 bg-error-soft px-4 py-3 text-sm font-semibold text-error">
-              <CircleAlert className="size-4 shrink-0" /> {errorMsg}
-            </div>
-          )}
-
-          <Button variant="verify" className="mt-4 h-14 w-full" disabled={status === "loading"} onClick={verify}>
-            {status === "loading" ? <><LoaderCircle className="animate-spin" /> Checking…</> : <><BadgeCheck /> Verify</>}
-          </Button>
-        </>
-      )}
-    </div>
-  );
-}
-
-function AccountNumberRow({ number }: { number: string }) {
-  const [copied, setCopied] = useState(false);
-  const copy = async () => { await navigator.clipboard?.writeText(number.replaceAll(" ", "")); setCopied(true); window.setTimeout(() => setCopied(false), 1400); };
-  return (
-    <div className="summary-box">
-      <span className="text-xs text-muted-foreground">প্রাপক</span>
-      <div className="mt-1 flex items-center justify-between gap-2">
-        <strong className="text-base text-foreground">{number}</strong>
-        <Button variant="copy" size="icon" onClick={copy}>{copied ? <Check /> : <Clipboard />}</Button>
+        <PaymentControlVisual />
       </div>
-    </div>
-  );
-}
-
-function AmountSummary({ amount }: { amount: string }) {
-  return (
-    <div className="summary-box">
-      <span className="text-xs text-muted-foreground">Amount</span>
-      <strong className="mt-1 block text-xl text-foreground">{amount}</strong>
-    </div>
-  );
-}
-
-function SuccessState({ invoiceNumber, onDone }: { invoiceNumber: string; onDone: () => void }) {
-  return (
-    <section className="glass-panel animate-page-in px-5 py-12 text-center">
-      <span className="mx-auto grid size-20 place-items-center rounded-full bg-success-soft text-success">
-        <BadgeCheck className="size-10" />
-      </span>
-      <h2 className="mt-5 text-2xl font-extrabold text-foreground">Payment সফল!</h2>
-      <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
-        Invoice <strong>{invoiceNumber}</strong> এর payment সফলভাবে verify হয়েছে।
-      </p>
-      <Button variant="pay" className="mt-7 h-12 w-full sm:w-auto sm:px-12" onClick={onDone}>Done</Button>
     </section>
+  );
+}
+
+function PaymentControlVisual() {
+  return (
+    <div className="relative mx-auto w-full max-w-[650px] animate-rise-late" aria-label="ShuvoPay payment control preview">
+      <div className="control-frame">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-5">
+          <div className="flex items-center gap-2.5"><BrandMark /><div><p className="text-sm font-extrabold">ShuvoPay</p><p className="text-[11px] text-muted-foreground">Private control</p></div></div>
+          <span className="flex items-center gap-1.5 rounded-full bg-success-soft px-2.5 py-1 text-[11px] font-bold text-success"><span className="status-dot" /> Live</span>
+        </div>
+        <div className="grid gap-4 p-4 sm:grid-cols-[0.88fr_1.12fr] sm:p-5">
+          <div className="rounded-lg bg-control-dark p-4 text-control-foreground shadow-deep">
+            <div className="flex items-center justify-between"><p className="text-xs text-control-muted">Payment received</p><BadgeCheck className="size-5 text-control-success" /></div>
+            <p className="mt-4 text-3xl font-extrabold">৳ 500.00</p>
+            <span className="mt-3 inline-flex items-center gap-1 rounded-full bg-control-success/15 px-2 py-1 text-[10px] font-bold text-control-success"><Check className="size-3" /> VERIFIED</span>
+            <dl className="mt-6 grid gap-3 text-xs">
+              <DataRow label="Transaction ID" value="TXN-SHUVO-83921" />
+              <DataRow label="Payment method" value="bKash" />
+              <DataRow label="Time" value="10:38 PM" />
+            </dl>
+          </div>
+          <div className="grid gap-3">
+            <MiniMetric label="Balance" value="৳ 24,850.00" icon={<WalletCards />} />
+            <div className="grid grid-cols-2 gap-3">
+              <MiniMetric label="Verified" value="128" icon={<BadgeCheck />} />
+              <MiniMetric label="Pending" value="07" icon={<Clock3 />} />
+            </div>
+            <div className="rounded-lg border border-border bg-secondary/60 p-3">
+              <div className="mb-2 flex items-center justify-between text-[11px] font-bold"><span>Weekly flow</span><span className="text-success">+18.4%</span></div>
+              <div className="flex h-14 items-end gap-1.5" aria-hidden="true">{[34, 52, 43, 69, 58, 88, 75].map((height, index) => <span key={index} className="chart-bar" style={{ height: `${height}%` }} />)}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="float-card float-card-left"><span className="grid size-8 place-items-center rounded-full bg-success-soft text-success"><BadgeCheck /></span><div><p className="text-xs font-bold">Payment Verified</p><p className="text-sm font-extrabold">৳ 1,250.00</p></div></div>
+      <div className="float-card float-card-right"><span className="grid size-8 place-items-center rounded-md bg-primary-soft text-primary"><ReceiptText /></span><div><p className="text-xs font-bold">Invoice Created</p><p className="text-[11px] text-muted-foreground">#INV-20391</p></div></div>
+    </div>
+  );
+}
+
+function DataRow({ label, value }: { label: string; value: string }) {
+  return <div className="flex justify-between gap-3 border-b border-control-border pb-2 last:border-0"><dt className="text-control-muted">{label}</dt><dd className="font-bold">{value}</dd></div>;
+}
+
+function MiniMetric({ label, value, icon }: { label: string; value: string; icon: ReactNode }) {
+  return <div className="rounded-lg border border-border bg-card p-3 shadow-soft"><div className="flex items-center justify-between text-muted-foreground"><span className="text-[11px] font-semibold">{label}</span><span className="[&_svg]:size-4 [&_svg]:text-primary">{icon}</span></div><p className="mt-2 text-base font-extrabold">{value}</p></div>;
+}
+
+function SectionHeading({ eyebrow, title, copy, centered = false, inverse = false }: { eyebrow?: string; title: string; copy: string; centered?: boolean; inverse?: boolean }) {
+  return <div className={cn("max-w-2xl", centered && "mx-auto text-center")}><p className={cn("text-xs font-extrabold uppercase text-primary", inverse && "text-api-accent")}>{eyebrow}</p><h2 className={cn("mt-3 text-3xl font-extrabold sm:text-4xl", inverse ? "text-api-foreground" : "text-foreground")}>{title}</h2><p className={cn("mt-4 text-base leading-7", inverse ? "text-api-muted" : "text-muted-foreground")}>{copy}</p></div>;
+}
+
+export function PaymentOverview() {
+  return (
+    <section id="overview" className="section-pad scroll-mt-20 bg-card">
+      <div className="section-shell"><SectionHeading eyebrow="Private overview" title="My Payment System" copy="Everything I need to monitor and control my payment workflow from one place." />
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{overviewStats.map(({ icon: Icon, ...item }) => <article key={item.label} className="metric-card"><div className={cn("metric-icon", `metric-${item.tone}`)}><Icon /></div><p className="mt-5 text-sm font-semibold text-muted-foreground">{item.label}</p><p className="mt-2 text-2xl font-extrabold">{item.value}</p><p className="mt-3 text-xs text-muted-foreground">{item.detail}</p></article>)}</div>
+      </div>
+    </section>
+  );
+}
+
+export function AutomationWorkflow() {
+  return (
+    <section id="payments" className="section-pad scroll-mt-20"><div className="section-shell"><SectionHeading eyebrow="Automation engine" title="Automated Payment Workflow" copy="A controlled flow from payment request to a verified, updated balance." centered />
+      <div className="mt-12 grid gap-3 md:grid-cols-3 xl:grid-cols-6">{workflow.map(({ label, icon: Icon }, index) => <div key={label} className="relative"><article className="workflow-step"><span>{String(index + 1).padStart(2, "0")}</span><div className="workflow-icon"><Icon /></div><h3>{label}</h3></article>{index < workflow.length - 1 && <ChevronRight className="workflow-arrow" />}</div>)}</div>
+    </div></section>
+  );
+}
+
+export function Transactions() {
+  return (
+    <section id="transactions" className="section-pad scroll-mt-20 bg-card"><div className="section-shell grid items-center gap-10 lg:grid-cols-[0.72fr_1.28fr]"><div><SectionHeading eyebrow="Live ledger" title="Recent Transactions" copy="A concise view of incoming activity across my connected payment workflows." /><Button asChild variant="outline" className="mt-7"><a href="#transactions">View All Transactions <ArrowRight /></a></Button></div>
+      <div className="data-panel"><div className="flex items-center justify-between border-b border-border px-4 py-4 sm:px-6"><div><p className="font-bold">Transaction feed</p><p className="text-xs text-muted-foreground">Updated moments ago</p></div><Button variant="ghost" size="icon" aria-label="Refresh transactions"><RefreshCcw /></Button></div>
+        <div>{transactions.map((item) => <article key={`${item.amount}-${item.provider}`} className="transaction-row"><span className={cn("transaction-status", item.pending && "is-pending")}>{item.pending ? <Clock3 /> : <Check />}</span><div className="min-w-0"><h3 className="truncate text-sm font-bold">{item.title}</h3><p className="text-xs text-muted-foreground">{item.provider} · {item.time}</p></div><div className="text-right"><p className="text-sm font-extrabold">{item.amount}</p><p className={cn("text-xs font-bold text-success", item.pending && "text-warning")}>{item.status}</p></div></article>)}</div>
+      </div></div></section>
+  );
+}
+
+export function Invoices() {
+  return (
+    <section id="invoices" className="section-pad scroll-mt-20"><div className="section-shell grid items-center gap-12 lg:grid-cols-2"><div className="invoice-stage"><div className="invoice-card"><div className="flex items-start justify-between border-b border-border pb-5"><div><div className="flex items-center gap-2"><BrandMark /><strong>SHUVOPAY</strong></div><p className="mt-3 text-xs text-muted-foreground">Private payment invoice</p></div><span className="rounded-full bg-success-soft px-3 py-1 text-xs font-extrabold text-success">PAID</span></div><dl className="mt-6 grid gap-4"><InvoiceRow label="Invoice" value="#INV-20391" /><InvoiceRow label="Amount" value="৳1,500.00" large /><InvoiceRow label="Transaction" value="TXN-849201" /><InvoiceRow label="Issued by" value="ShuvoPay" /></dl><div className="mt-6 flex items-center gap-2 border-t border-border pt-4 text-xs text-muted-foreground"><ShieldCheck className="size-4 text-primary" /> Verified by private automation</div></div></div>
+      <div><SectionHeading eyebrow="Invoice control" title="Simple Invoice Management" copy="Create, track and verify payment invoices from a single private workspace." /><div className="mt-7 flex flex-wrap gap-4 text-sm font-semibold text-muted-foreground"><span className="flex items-center gap-2"><Check className="size-4 text-success" /> Automatic status</span><span className="flex items-center gap-2"><Check className="size-4 text-success" /> Linked transactions</span></div><Button asChild className="mt-8 h-11"><a href="#invoices">Create Invoice <ArrowRight /></a></Button></div>
+    </div></section>
+  );
+}
+
+function InvoiceRow({ label, value, large = false }: { label: string; value: string; large?: boolean }) {
+  return <div className="flex items-end justify-between gap-4"><dt className="text-sm text-muted-foreground">{label}</dt><dd className={cn("text-sm font-bold", large && "text-2xl font-extrabold text-primary")}>{value}</dd></div>;
+}
+
+export function ApiSection() {
+  return (
+    <section id="api" className="scroll-mt-20 bg-api py-20 sm:py-28"><div className="section-shell grid items-center gap-12 lg:grid-cols-[0.8fr_1.2fr]"><div><SectionHeading eyebrow="Developer interface" title="Payment Automation API" copy="Connect my own projects with ShuvoPay through a simple API." inverse /><div className="mt-6 flex items-center gap-2 text-sm text-api-muted"><LockKeyhole className="size-4 text-api-accent" /> Private endpoints · authenticated access</div><Button asChild className="mt-8 bg-api-accent text-api hover:bg-api-accent/90"><a href="#api">API Documentation <ArrowRight /></a></Button></div>
+      <div className="code-window"><div className="flex items-center justify-between border-b border-api-border px-4 py-3"><div className="flex gap-1.5"><span className="code-dot" /><span className="code-dot" /><span className="code-dot" /></div><span className="text-[10px] font-bold uppercase text-api-muted">Private API · v1</span></div><div className="grid gap-6 p-4 sm:p-6"><CodeBlock label="Request" code={codeRequest} /><CodeBlock label="Response" code={codeResponse} success /></div></div>
+    </div></section>
+  );
+}
+
+function CodeBlock({ label, code, success = false }: { label: string; code: string; success?: boolean }) {
+  return <div><p className={cn("mb-2 text-[10px] font-extrabold uppercase text-api-accent", success && "text-control-success")}>{label}</p><pre className="overflow-x-auto text-xs leading-6 text-code sm:text-sm"><code>{code}</code></pre></div>;
+}
+
+export function Security() {
+  return (
+    <section id="settings" className="section-pad scroll-mt-20 bg-card"><div className="section-shell"><SectionHeading eyebrow="Access protection" title="Private. Secure. Controlled." copy="Designed as a private payment infrastructure for my own digital ecosystem." centered /><div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">{securityItems.map(({ label, icon: Icon }) => <article key={label} className="security-item"><span><Icon /></span><h3>{label}</h3></article>)}</div></div></section>
+  );
+}
+
+export function MyProjects() {
+  return (
+    <section className="section-pad"><div className="section-shell"><SectionHeading eyebrow="Private ecosystem" title="My Projects" copy="ShuvoPay keeps payment activity organized across the digital products I operate." /><div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{projects.map(({ title, description, icon: Icon }) => <article key={title} className="project-card"><div className="project-icon"><Icon /></div><h3 className="mt-5 text-lg font-extrabold">{title}</h3><p className="mt-2 min-h-10 text-sm leading-5 text-muted-foreground">{description}</p><a href="#overview" className="mt-6 inline-flex items-center gap-1 text-sm font-bold text-primary hover:gap-2">Open <ArrowRight className="size-4" /></a></article>)}</div></div></section>
+  );
+}
+
+export function Activity() {
+  return (
+    <section className="section-pad bg-card"><div className="section-shell grid items-center gap-12 lg:grid-cols-[0.8fr_1.2fr]"><div><SectionHeading eyebrow="Private monitoring" title="System Activity" copy="A clear, real-time trail of the payment engine working across my projects." /><div className="mt-7 inline-flex items-center gap-2 rounded-full bg-success-soft px-3 py-1.5 text-xs font-bold text-success"><ActivityIcon className="size-4" /> All systems operational</div></div><div className="activity-panel">{activities.map(({ title, time, icon: Icon }, index) => <article key={title} className="activity-row"><div className="activity-rail"><span><Icon /></span>{index < activities.length - 1 && <i />}</div><div><h3 className="text-sm font-bold">{title}</h3><p className="mt-1 text-xs text-muted-foreground">{time}</p></div><span className="ml-auto status-dot" /></article>)}</div></div></section>
+  );
+}
+
+function FinalCta() {
+  return (
+    <section className="px-4 py-16 sm:px-6 sm:py-24"><div className="cta-panel mx-auto max-w-7xl overflow-hidden px-6 py-14 text-center sm:px-12 sm:py-20"><div className="mx-auto grid size-12 place-items-center rounded-lg bg-primary-foreground/15 text-primary-foreground"><Gauge /></div><h2 className="mt-6 text-3xl font-extrabold text-primary-foreground sm:text-5xl">Everything Under My Control.</h2><p className="mx-auto mt-4 max-w-xl text-base leading-7 text-primary-foreground/75">One private payment system for my own projects, transactions and automation.</p><Button asChild variant="secondary" size="lg" className="mt-8 h-12 w-full sm:w-auto"><a href="#overview">Open ShuvoPay Dashboard <ArrowRight /></a></Button></div></section>
+  );
+}
+
+export function Footer() {
+  return (
+    <footer className="border-t border-border bg-card"><div className="section-shell grid gap-10 py-12 md:grid-cols-[1fr_auto] md:items-start"><div><div className="flex items-center gap-2.5"><BrandMark /><span className="text-lg font-extrabold">ShuvoPay</span></div><p className="mt-4 text-sm text-muted-foreground">Private Payment Automation System</p><p className="mt-2 text-sm font-semibold">Developed by Shuvo Ahmed</p></div><nav className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm font-semibold text-muted-foreground sm:grid-cols-5">{["Dashboard", "Transactions", "Invoices", "API", "Settings"].map((item) => <a key={item} href={item === "Dashboard" ? "#overview" : `#${item.toLowerCase()}`} className="hover:text-primary">{item}</a>)}</nav></div><div className="border-t border-border"><div className="section-shell flex flex-col gap-2 py-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between"><p>© 2026 ShuvoPay. Personal Project.</p><p className="flex items-center gap-1.5"><Fingerprint className="size-3.5" /> Private access by Shuvo Ahmed</p></div></div></footer>
   );
 }

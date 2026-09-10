@@ -77,12 +77,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Orbit Digital Checkout" },
-      { name: "description", content: "Secure mobile payment checkout." },
-      { name: "author", content: "Orbit Digital" },
+      { title: "ShuvoPay — Private Payment Control" },
+      { name: "description", content: "Private payment automation and transaction control." },
+      { name: "author", content: "Shuvo Ahmed" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
